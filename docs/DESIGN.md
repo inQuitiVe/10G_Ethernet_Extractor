@@ -117,14 +117,32 @@ Trade-off: +1 cycle output latency, 73-bit extra pipeline FF; estimated fmax imp
 
 ## Variant Comparison
 
-| Metric         | Baseline    | Power       | Area        | Throughput    | Timing        |
-|----------------|-------------|-------------|-------------|---------------|---------------|
-| Est. gates     | ~1500       | ~1600       | ~800        | ~1700         | ~1600         |
-| Critical path  | ~6 FO4      | ~6 FO4      | ~2 FO4      | ~7 FO4        | ~3 FO4        |
-| Input bubble   | 1/promotion | 1/promotion | N/A         | 0             | 1/promotion   |
-| Output latency | 0 cyc       | +1 cyc      | serial      | 0 cyc         | +1 cyc        |
-| Dynamic power  | ref         | ~60%        | ~40%        | ~110%         | ~105%         |
-| Best for       | Dev / debug | Low-power   | Area-limited| Max throughput| High-frequency|
+| Metric             | Baseline    | Power       | Area        | Throughput    | Timing        |
+|--------------------|-------------|-------------|-------------|---------------|---------------|
+| Est. gates         | ~1500       | ~1600       | ~800        | ~1700         | ~1600         |
+| Critical path      | ~6 FO4      | ~6 FO4      | ~2 FO4      | ~7 FO4        | ~3 FO4        |
+| Input bubble       | 1/promotion | 1/promotion | N/A         | 0             | 1/promotion   |
+| Output latency     | 0 cyc       | +1 cyc      | serial      | 0 cyc         | +1 cyc        |
+| Dynamic power      | ref         | ~60%        | ~40%        | ~110%         | ~105%         |
+| Best for           | Dev / debug | Low-power   | Area-limited| Max throughput| High-frequency|
+
+### Measured Cycle Efficiency (seed = 42)
+
+`eff = input beats / active cycles × 100%`  
+Active cycles = first input beat → last output beat, summed over all packets.
+
+| Scenario         | exp beats | baseline  | power     | area      | throughput | timing    |
+|------------------|----------:|:---------:|:---------:|:---------:|:----------:|:---------:|
+| default (20 pkt) |       182 | 376 (48%) | 398 (46%) | 1420 (13%)| 276 (66%)  | 398 (46%) |
+| dense  (50 pkt)  |       777 | 1717 (45%)| 1771 (44%)| 6138 (13%)| 1472 (53%) | 1771 (44%)|
+| max    (20 pkt)  |       163 | 328 (50%) | 350 (47%) | 1274 (13%)| 224 (73%)  | 350 (47%) |
+| long  (200 pkt)  |      2493 | 5161 (48%)| 5407 (46%)|19572 (13%)| 3731 (67%) | 5407 (46%)|
+
+Key observations:
+- **throughput** achieves 53–73% efficiency by eliminating input bubbles (combinational `s_tready`).
+- **baseline / power / timing** settle around 45–50%: one stall cycle per `wb→wa` promotion.
+- **area** runs at ~13%: byte-serial processing takes ~8× more cycles than input beats.
+- **power** and **timing** share identical cycle counts (both add only a registered output stage).
 
 ---
 

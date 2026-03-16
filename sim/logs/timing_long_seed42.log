@@ -7,5 +7,6 @@ Stress Testbench
 ================================================================
 Packets : 200
 Results : 2565 PASS, 0 FAIL
+Cycles  : 5407 exp 2493
 ================================================================
-sim/msg_extractor_stress_tb.sv:278: $finish called at 66115000 (1ps)
+sim/msg_extractor_stress_tb.sv:298: $finish called at 66115000 (1ps)

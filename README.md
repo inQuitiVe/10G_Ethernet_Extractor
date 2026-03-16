@@ -9,6 +9,23 @@ Receives a raw Ethernet byte stream and extracts variable-length messages format
 
 ---
 
+## Performance at a Glance
+
+Measured cycle efficiency across five design variants and four stress scenarios (seed = 42).  
+`eff = input beats / active cycles` — higher is better; `exp` = total input beats (ideal lower bound).
+
+| Scenario          | exp beats | baseline  | power     | area       | throughput | timing    |
+|-------------------|----------:|:---------:|:---------:|:----------:|:----------:|:---------:|
+| default (20 pkts) |       182 | 376 (48%) | 398 (46%) | 1420 (13%) | 276 (66%)  | 398 (46%) |
+| dense  (50 pkts)  |       777 | 1717 (45%)| 1771 (44%)| 6138 (13%) | 1472 (53%) | 1771 (44%)|
+| max    (20 pkts)  |       163 | 328 (50%) | 350 (47%) | 1274 (13%) | 224 (73%)  | 350 (47%) |
+| long  (200 pkts)  |      2493 | 5161 (48%)| 5407 (46%)|19572 (13%) | 3731 (67%) | 5407 (46%)|
+
+All 5 variants × 4 scenarios = **20 stress runs**: 18970 / 18970 beat PASS, 0 FAIL, 0 TIMEOUT.  
+Run `make stress_all && make parse` to reproduce.
+
+---
+
 ## Prerequisites
 
 | Tool | Purpose |

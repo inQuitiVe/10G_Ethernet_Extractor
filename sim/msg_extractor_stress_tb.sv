@@ -86,6 +86,8 @@ module msg_extractor_stress_tb;
     end
   end
 
+  always @(posedge clk) global_cycle++;
+
   // ── Vector storage (pre-loaded from file) ────────────────────────────────────
   // v_type: 0 = R (reset), 1 = I (input beat), 2 = O (expected output)
   localparam MAX_V = 65536;
@@ -103,6 +105,13 @@ module msg_extractor_stress_tb;
   integer      n_exp;
 
   integer pass_cnt, fail_cnt, pkt_cnt;
+
+  // ── Cycle counters ───────────────────────────────────────────────────────────
+  integer  global_cycle;        // free-running clock counter
+  integer  active_cycles;       // cumulative active cycles across all packets
+  integer  pkt_cycle_start;     // cycle when first I beat of current packet was sent
+  integer  pkt_has_input;       // flag: first I beat seen for current packet
+  integer  n_input_beats_total; // total input beats (= theoretical minimum cycles)
 
   // Convert 8-bit tkeep to 64-bit byte-enable mask (MSB-first)
   function automatic logic [63:0] tkeep_mask(input logic [7:0] k);
@@ -151,6 +160,8 @@ module msg_extractor_stress_tb;
       @(posedge clk);
       timeout++;
     end
+
+    if (pkt_has_input) active_cycles += (global_cycle - pkt_cycle_start);
 
     if (n_out < pkt_base + n_exp) begin
       $display("  TIMEOUT pkt %0d: expected %0d beats, got %0d",
@@ -234,6 +245,8 @@ module msg_extractor_stress_tb;
     // ── Replay vectors ────────────────────────────────────────────────────────
     pass_cnt = 0; fail_cnt = 0; pkt_cnt = 0;
     n_exp = 0; pkt_base = 0;
+    global_cycle = 0; active_cycles = 0;
+    pkt_has_input = 0; n_input_beats_total = 0;
 
     for (i = 0; i < n_v; i++) begin
       case (v_type[i])
@@ -243,6 +256,7 @@ module msg_extractor_stress_tb;
             s_tvalid = 0;
             check_packet(pkt_base);
           end
+          pkt_has_input = 0;
           do_reset;
           pkt_base = n_out;
           n_exp    = 0;
@@ -250,6 +264,11 @@ module msg_extractor_stress_tb;
         end
 
         1: begin // I — send input beat
+          if (!pkt_has_input) begin
+            pkt_cycle_start = global_cycle;
+            pkt_has_input   = 1;
+          end
+          n_input_beats_total++;
           send_beat(v_d[i], v_k[i], v_l[i]);
         end
 
@@ -274,6 +293,7 @@ module msg_extractor_stress_tb;
     $display("================================================================");
     $display("Packets : %0d", pkt_cnt);
     $display("Results : %0d PASS, %0d FAIL", pass_cnt, fail_cnt);
+    $display("Cycles  : %0d exp %0d", active_cycles, n_input_beats_total);
     $display("================================================================");
     $finish;
   end

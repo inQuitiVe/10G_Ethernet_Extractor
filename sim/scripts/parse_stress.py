@@ -59,20 +59,25 @@ def parse_log(path: Path) -> dict:
     n_timeout = len(re.findall(r'\bTIMEOUT\b', text))
     completed = res_m is not None
 
+    # ── Cycle counts (stress testbench only) ──────────────────────────────────
+    cyc_m = re.search(r'Cycles\s*:\s*(\d+)\s+exp\s+(\d+)', text)
+
     return {
-        'file':      path.name,
-        'log_type':  log_type,
-        'variant':   variant,
-        'scenario':  scenario,
-        'seed':      seed,
-        'n_pkts':    n_pkts,
-        'msgs':      msgs,
-        'pay':       pay,
-        'n_pass':    int(res_m.group(1)) if res_m else None,
-        'n_fail':    int(res_m.group(2)) if res_m else None,
-        'n_timeout': n_timeout,
-        'completed': completed,
-        'ok':        completed and int(res_m.group(2)) == 0,
+        'file':       path.name,
+        'log_type':   log_type,
+        'variant':    variant,
+        'scenario':   scenario,
+        'seed':       seed,
+        'n_pkts':     n_pkts,
+        'msgs':       msgs,
+        'pay':        pay,
+        'n_pass':     int(res_m.group(1)) if res_m else None,
+        'n_fail':     int(res_m.group(2)) if res_m else None,
+        'n_timeout':  n_timeout,
+        'completed':  completed,
+        'ok':         completed and int(res_m.group(2)) == 0,
+        'act_cycles': int(cyc_m.group(1)) if cyc_m else None,
+        'exp_cycles': int(cyc_m.group(2)) if cyc_m else None,
     }
 
 
@@ -191,6 +196,84 @@ def print_summary_line(label: str, records: list):
         print(RED(f'  RESULT  {n_ok}/{n_runs} {label} PASS  | ') + ', '.join(parts))
 
 
+# ── Cycle count table ─────────────────────────────────────────────────────────
+
+_SCENARIO_LIST = ['default', 'dense', 'max', 'long']
+_VARIANT_LIST  = ['baseline', 'power', 'area', 'throughput', 'timing']
+
+def print_cycle_table(records: list):
+    """2-D grid: variants × scenarios, showing act cycles and efficiency %."""
+    stress = [r for r in records
+              if r['log_type'] == 'stress'
+              and r.get('act_cycles') is not None
+              and r.get('exp_cycles') is not None]
+    if not stress:
+        return
+
+    lookup    = {(r['variant'], r['scenario']): r for r in stress}
+    scenarios = [s for s in _SCENARIO_LIST if any((v, s) in lookup for v in _VARIANT_LIST)]
+    variants  = [v for v in _VARIANT_LIST  if any((v, s) in lookup for s in scenarios)]
+    if not scenarios or not variants:
+        return
+
+    # Column widths — enough for "99999 (99%)"
+    VAR_W  = max(len(v) for v in variants)
+    VAR_W  = max(VAR_W, len('variant'))
+    CELL_W = max(
+        max(
+            len(f"{r['act_cycles']} ({round(r['exp_cycles']/r['act_cycles']*100)}%)")
+            for r in stress if r['act_cycles']
+        ),
+        max(len(s) for s in scenarios),
+        len('exp beats'),
+    ) + 2  # padding
+
+    def sep():
+        return '-' * (VAR_W + 2) + '+' + ('+'.join('-' * (CELL_W + 2) for _ in scenarios)) + '-+'
+
+    def fmt_hdr(s):
+        return BOLD(s.center(CELL_W))
+
+    def fmt_exp(s):
+        exp = next((r['exp_cycles'] for r in stress if r['scenario'] == s), None)
+        return (str(exp).rjust(CELL_W) if exp is not None else '?'.rjust(CELL_W))
+
+    def fmt_act(r):
+        if r is None:
+            return '?'.rjust(CELL_W)
+        act, exp = r['act_cycles'], r['exp_cycles']
+        eff = round(exp / act * 100) if act else 0
+        cell = f'{act} ({eff}%)'
+        coloured = GREEN(cell.rjust(CELL_W)) if eff >= 80 else \
+                   YELLOW(cell.rjust(CELL_W)) if eff >= 40 else \
+                   cell.rjust(CELL_W)
+        return coloured
+
+    print()
+    print('=' * 66)
+    print(BOLD('  Cycle Count Table'))
+    print('  exp = total input beats (ideal min)  '
+          'act = measured active cycles  eff = exp/act')
+    print('=' * 66)
+    print()
+
+    # Header row
+    hdr_cells = ' | '.join(fmt_hdr(s) for s in scenarios)
+    print('  ' + 'variant'.ljust(VAR_W) + ' | ' + hdr_cells + ' |')
+
+    # exp row
+    exp_cells = ' | '.join(fmt_exp(s) for s in scenarios)
+    print('  ' + 'exp beats'.ljust(VAR_W) + ' | ' + exp_cells + ' |')
+    print('  ' + sep())
+
+    # variant rows
+    for v in variants:
+        cells = ' | '.join(fmt_act(lookup.get((v, s))) for s in scenarios)
+        print('  ' + v.ljust(VAR_W) + ' | ' + cells + ' |')
+    print('  ' + sep())
+    print()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def collect_logs(args: list) -> list[Path]:
@@ -258,6 +341,10 @@ def main():
         print()
         print('=' * WIDTH)
         any_fail = any_fail or any(not r['ok'] for r in stress_recs)
+
+        # ── Cycle count table ─────────────────────────────────────────────────
+        if any(r.get('act_cycles') is not None for r in stress_recs):
+            print_cycle_table(stress_recs)
 
     sys.exit(1 if any_fail else 0)
 
