@@ -1,4 +1,5 @@
 # variant=power scenario=dense seed=42 n_pkts=50 msgs=5-15 pay=8-12
+VCD info: dumpfile sim/waveform/power_stress.vcd opened for output.
 ================================================================
 Stress Testbench
   vectors : sim/pattern/power_dense_seed42.txt

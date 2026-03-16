@@ -20,10 +20,10 @@
 
 # ── Functional & Stress ───────────────────────────────────────────────────────
 VARIANTS  = baseline power area throughput timing
-DUMP_WAVE = 0
+DUMP_WAVE = 1
 
 # ── Toolchain ─────────────────────────────────────────────────────────────────
-PYTHON    = python
+PYTHON    = python3
 
 # ── Stress defaults ───────────────────────────────────────────────────────────
 SEED     = 42
