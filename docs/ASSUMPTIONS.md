@@ -5,10 +5,10 @@
 Each message consists of:
 
 ```
-┌─────────────────────────┬─────────────────────────────────────┐
-│  Header (2 bytes)       │  Payload (8–32 bytes)                │
-│  Big-endian payload_len │  Raw bytes, output directly to AXI-S  │
-└─────────────────────────┴─────────────────────────────────────┘
+┌─────────────────────────┬────────────────────────────────────────┐
+│  Header (2 bytes)       │  Payload (8–32 bytes)                  │
+│  Big-endian payload_len │  Raw bytes, output directly to AXI-S   │
+└─────────────────────────┴────────────────────────────────────────┘
 ```
 
 - **Header**: 2 bytes, big-endian, payload length in bytes
@@ -28,12 +28,12 @@ Each message consists of:
 
 ## Specification Assumptions
 
-| Item | Assumption |
-|------|------------|
-| Input tkeep | Baseline assumes tkeep is always 8'hFF (all valid) |
-| Output tready | Always 1 (no backpressure) |
-| Header validity | payload_len assumed in range 8–32 |
-| Packet boundary | Marked by s_tlast |
+| Item              | Assumption                                           |
+|-------------------|------------------------------------------------------|
+| Input tkeep       | Baseline assumes tkeep is always 8'hFF (all valid)   |
+| Output tready     | Always 1 (no backpressure)                           |
+| Header validity   | payload_len assumed in range 8–32                    |
+| Packet boundary   | Marked by s_tlast                                    |
 
 ## Known Limitations (Baseline)
 

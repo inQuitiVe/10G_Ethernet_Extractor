@@ -1,402 +1,138 @@
-# 10G Ethernet Message Extractor — Five-Variant Architecture
+# Design Notes — 10G Ethernet Message Extractor
 
-## System Specification
+## Specification
 
-| Item | Description |
-|------|-------------|
-| Input interface | 64-bit AXI-Stream Slave |
-| Output interface | 64-bit AXI-Stream Master |
-| Message format | `[2B big-endian payload_len][payload]` |
-| Payload length | 8–32 bytes |
-| Max packet length | ≤ 1500 bytes |
-| Output backpressure | None (m_tready always 1) |
-| Data byte order | Big-endian (MSB first) |
-
-Messages are contiguous within a packet, no padding.
+| Item               | Value                                         |
+|--------------------|-----------------------------------------------|
+| Input / Output     | 64-bit AXI-Stream (Slave / Master)            |
+| Message format     | `[2B big-endian payload_len][payload 8–32 B]` |
+| Max packet length  | ≤ 1500 B, messages packed contiguously        |
+| Output backpressure| None (`m_tready` always 1)                    |
+| Byte order         | Big-endian                                    |
 
 ---
 
-## Common Design Decisions
+## Common Architecture
 
-### Message Format Assumption
-```
-Packet: [msg0_hdr(2B)] [msg0_payload(8-32B)] [msg1_hdr(2B)] [msg1_payload] ...
-```
-The 16-bit big-endian header value is the payload length in bytes.
+All window-based variants share:
 
-### AXI-Stream Alignment
-The 64-bit input bus uses 8-byte beats; message boundaries may not align to 8-byte word boundaries.
-**Byte offset** (`off_q`) tracks the current message start position within the buffer (0–7).
+- **Double buffer (`wa_q` / `wb_q`)** — `wa` is the active word, `wb` holds the prefetched word.
+- **128→64 Barrel Shifter** — `wide_fill[127 - off_q*8 -: 64]` extracts 8 output bytes from any byte offset.
+- **Byte offset (`off_q`, 3 b)** — tracks where the current message starts within `wa`.
+- **3-state FSM** — `S_IDLE → S_HDR → S_PAY`, returns to `S_HDR` between messages in the same packet.
 
----
-
-## Variant 0: Baseline (Most Intuitive)
-
-**File**: `rtl/msg_extractor_baseline.sv`
-
-### Core Architecture
-
-```
-s_tdata → [wa_q / wb_q 128b double buffer] → [Barrel Shift] → m_tdata
-                    ↑                          ↑
-               s_tready = !wb_vld         FSM (3-state)
-```
-
-### Key Design
-
-| Component | Design |
-|-----------|--------|
-| Double buffer (wa/wb) | wa_q = older 64b word, wb_q = newer 64b word |
-| 128→64 Barrel Shifter | `wide_fill[127 - off_q*8 -: 64]` |
-| s_tready | Sequential: `!wb_vld_q` (1 cycle bubble) |
-| FSM | S_IDLE / S_HDR / S_PAY (3 states, 2b) |
-
-### State Machine Transitions
-
-```
-         s_tvalid
-S_IDLE ──────────→ S_HDR ──────────→ S_PAY
-                  off≤5 or wb_vld        │ last beat
-                                  ←──────┘
-                                  S_HDR ──→ S_IDLE (last_q)
-```
-
-**S_IDLE**: Wait for first packet beat. On `s_tvalid` → load `wa_q`, enter S_HDR.
-
-**S_HDR**: Read 2-byte header from `wide[127-off*8 -: 16]`.
-- `off ≤ 5`: header fully in wa, `off += 2`.
-- `off = 6`: header in wa, payload starts next word, need wb valid.
-- `off = 7`: header spans wa/wb boundary, need wb valid.
-Enter S_PAY.
-
-**S_PAY**: Output 1 beat per cycle (8 bytes or final partial beat).
-- Non-last beat: `wa ← wb`, release wb slot, continue.
-- Last beat: compute new `off_q`, return to S_HDR or S_IDLE.
-
-### Register Summary
-
-| Register | Width | Purpose |
-|----------|-------|---------|
-| wa_q | 64 | Older 64b |
-| wb_q | 64 | Newer 64b |
-| wb_vld | 1 | wb valid flag |
-| off_q | 3 | Message offset in wa |
-| prem_q | 6 | Remaining payload bytes |
-| last_q | 1 | s_tlast received |
-| state | 2 | FSM state |
-| **Total** | **141** | |
-
-### Trade-off Summary
-
-| Metric | Value |
-|--------|-------|
-| Registers (bits) | ~141 |
-| Stall cycle | 1 cycle (when wb promoted to wa) |
-| Critical Path | 128→64 Barrel Shifter (~8 FO4) |
-| Output latency | 0 cycles (combinational pass-through) |
+**`s_tready`** is `!wb_vld_q` (Baseline / Power / Timing) or combinational (Throughput).
 
 ---
 
-## Variant 1: Power-Optimized (Lowest Power)
+## Variant 0 — Baseline
 
-**File**: `rtl/msg_extractor_power.sv`
+**File:** `rtl/msg_extractor_baseline.sv`
 
-### Power Optimization Strategies
+Reference implementation. Combinational output, sequential `s_tready`.
 
-1. **Output Register**: `m_tdata` updates only when m_tvalid is asserted.
-   In Baseline, `m_tdata` is pure combinational logic, toggling every cycle with wa/wb/off changes,
-   causing high switching activity. With registered output, only real outputs toggle.
+| Register    | Bits | Role                                  |
+|-------------|------|---------------------------------------|
+| `wa_q`      | 64   | Active word                           |
+| `wb_q`      | 64   | Prefetch word                         |
+| `wb_vld_q`  | 1    | `wb` valid flag                       |
+| `wa_valid_q`| 1    | `wa` valid flag (ghost-message guard) |
+| `off_q`     | 3    | Byte offset within `wa`               |
+| `prem_q`    | 6    | Remaining payload bytes               |
+| `last_q`    | 1    | `s_tlast` received                    |
+| `state_q`   | 2    | FSM state                             |
 
-2. **Barrel Shift Gating** (Wide Bus Gating):
-   ```sv
-   wide_gated = (state_q == S_PAY) ? wide_fill : 128'b0;
-   ```
-   When not in S_PAY, 128-bit combinational inputs are zeroed, reducing toggle rate.
-
-3. **Binary state encoding**: Fewer state register toggles compared to one-hot.
-
-4. **Explicit Register Enable**: Synthesis tools can infer clock gating.
-
-### Architecture Difference
-
-```
-Baseline: wide_fill → 128→64 MUX → m_tdata (combinational)
-Power:    wide_gated (gated) → 128→64 MUX → m_tdata_pre → [FF] → m_tdata (registered)
-```
-
-### Trade-off
-
-| Metric | vs Baseline |
-|--------|-------------|
-| Dynamic power | Significantly lower (~40–60%, depends on activity) |
-| Output latency | +1 cycle |
-| Area | Slightly larger (extra output FF) |
-| Throughput | Same |
-| Critical path | Same |
+- **Input bubble:** 1 cycle per `wb→wa` promotion (`s_tready` updates next cycle).
+- **Output latency:** 0 cycles (combinational path).
 
 ---
 
-## Variant 2: Area-Optimized (Smallest Area)
+## Variant 1 — Power-Optimized
 
-**File**: `rtl/msg_extractor_area.sv`
+**File:** `rtl/msg_extractor_power.sv`
 
-### Area Optimization Strategy
+Three changes over Baseline to reduce dynamic power:
 
-Eliminate main area cost: 128→64 bit Barrel Shifter (~800 gates).
+1. **Registered output** — `m_tdata` updates only when `m_tvalid` is asserted; stops constant toggling from the combinational path.
+2. **Wide-bus gating** — `wide_gated = (state == S_PAY) ? wide_fill : 128'b0`; kills switching in the barrel shifter when idle.
+3. **Binary FSM encoding** — fewer state-register transitions.
 
-Replace with **Byte Accumulator** architecture:
-- Each cycle extract **1 byte** from `wa_q[bptr_q]` (8-to-1 byte MUX = ~64 gates)
-- Fill 64-bit output accumulator `out_q` progressively
-- Output when 8 bytes accumulated or payload last byte reached
+Trade-off: +1 cycle output latency, slightly larger area.
 
-### Byte Extractor (Replaces Barrel Shifter)
+---
+
+## Variant 2 — Area-Optimized
+
+**File:** `rtl/msg_extractor_area.sv`
+
+Replaces the 128→64 barrel shifter (~800 gates) with a **byte-serial accumulator**:
+
+- Extract 1 byte/cycle from `wa_q` using an 8→1 byte MUX (~64 gates).
+- Accumulate into `out_q`; emit when 8 bytes fill or payload ends.
+
+Extra registers vs Baseline: `out_q` (64), `bptr_q` (3), `ocnt_q` (3), `hb0_q` (8), `hgot` (1).
+
+Trade-off: ~50% less combinational area, ~8× lower throughput (byte-serial).
+
+---
+
+## Variant 3 — Throughput-Optimized
+
+**File:** `rtl/msg_extractor_throughput.sv`
+
+Eliminates the 1-cycle input bubble by making `s_tready` combinational:
 
 ```sv
-always_comb case (bptr_q)
-  3'd0: cur_byte = wa_q[63:56];
-  3'd1: cur_byte = wa_q[55:48];
-  // ...
-  default: cur_byte = wa_q[7:0];
-endcase
-```
-
-8 cases × 8-bit select = **64-gate MUX** (vs 8×64-bit 8-way MUX = 800+ gates)
-
-### Architecture Flow
-
-```
-s_tdata → [wa_q 64b] ─→ cur_byte (8b MUX)
-                              ↓ (1 byte/cycle)
-                         [out_q 64b accumulator]
-                              ↓ (when full or last byte)
-                         m_tdata, m_tkeep, m_tvalid
-```
-
-### Register Summary
-
-| Register | Width | Purpose |
-|----------|-------|---------|
-| wa_q | 64 | Input word |
-| out_q | 64 | Output accumulator |
-| bptr_q | 3 | Byte index in wa_q |
-| ocnt_q | 3 | Bytes filled in out_q |
-| prem_q | 6 | Remaining payload bytes |
-| hb0_q | 8 | Store first header byte |
-| hgot | 1 | Header byte 0 stored |
-| last | 1 | s_tlast seen |
-| state | 2 | FSM |
-| **Total** | ~152 | |
-
-### Trade-off
-
-| Metric | vs Baseline |
-|--------|-------------|
-| Combinational area (gates) | **~50% smaller** |
-| Register bits | Similar (+11 bits) |
-| Throughput | ~8× slower (1 byte/cycle accumulation) |
-| Critical path | Shallower (8-to-1 MUX) |
-| Use case | Resource-limited FPGA, low-speed embedded |
-
----
-
-## Variant 3: Throughput-Optimized (Fewest Cycles)
-
-**File**: `rtl/msg_extractor_throughput.sv`
-
-### Throughput Analysis
-
-Baseline 1-cycle bubble cause:
-```
-s_tready = !wb_vld_q  (sequential)
-```
-When wb is promoted to wa (wb_vld_nx ← 0), s_tready reflects only on the **next clock cycle**,
-causing 1-cycle input bubble.
-
-### Solution: Combinational s_tready
-
-```sv
-// "promoting" = this cycle will release wb slot
 logic promoting;
 assign promoting =
-  ((state_q == S_PAY) && m_tvalid && m_tready && (prem_q > 6'd8)) ||  // non-last PAY
+  ((state_q == S_PAY) && m_tvalid && m_tready && (prem_q > 6'd8)) ||
   ((state_q == S_PAY) && m_tvalid && m_tready && (prem_q <= 6'd8) && (noff5 >= 5'd8)) ||
   ((state_q == S_HDR) && wb_vld_q && (off_q >= 3'd6));
 
-// s_tready fires in the SAME cycle as the promotion
 assign s_tready = (state_q == S_IDLE) || !wb_vld_q || promoting;
 ```
 
-### Core Operation: Same-Cycle Fill of New wb
+`wb` is filled in the same cycle it is promoted to `wa`, so the input stream never stalls.
 
-```sv
-// Fill block runs in same cycle as promotion:
-if (s_tvalid && s_tready && state != S_IDLE) begin
-  wb_nx     = s_tdata;   // new word loaded
-  wb_vld_nx = 1'b1;
-end
-
-// S_PAY non-last beat:
-//   wa_nx = wb_q (old)    ← promotion
-//   wb = s_tdata (new)    ← simultaneous fill
-```
-
-### Performance (Test 2: Two messages 8B + 10B)
-
-| Variant | Cycles | Notes |
-|---------|--------|-------|
-| Baseline | ~12 | 1-cycle bubble per wb promotion |
-| Throughput | ~9 | No bubble, s_tready high same cycle |
-
-### Trade-off
-
-| Metric | vs Baseline |
-|--------|-------------|
-| Throughput | +30% (fewer bubbles) |
-| Combinational path | Deeper (s_tready depends on FSM + prem_q) |
-| Area | Slightly larger (promoting logic) |
-| Power | Slightly higher (higher activity) |
+Trade-off: deeper `s_tready` combinational path; ~30% throughput gain.
 
 ---
 
-## Variant 4: Timing-Optimized (Shortest Clock Time)
+## Variant 4 — Timing-Optimized
 
-**File**: `rtl/msg_extractor_timing.sv`
+**File:** `rtl/msg_extractor_timing.sv`
 
-### Critical Path Analysis
-
-Baseline critical path:
-```
-wb_vld_q (FF) → wide_fill (128b concat) → wide_fill[127-off*8 -: 64] (8-way 64b MUX) → m_tdata
-```
-This path involves:
-- 2:1 MUX (64b, wb_vld select) = ~1 FO4
-- 8:1 MUX (64b, off_q select) = ~3–4 FO4
-- Total ~5–6 FO4, timing bottleneck
-
-### Solution: Output Pipeline Register
+Inserts a pipeline register on the output path to cut the critical path ~in half:
 
 ```
-Stage-0 (combinational):  wide_fill → barrel shift → m_tdata_pre
-                                    ↓  [pipeline FF]
-Stage-1 (registered):                m_tdata_q → m_tdata (output)
+Stage 0 (combinational):  wide_fill → 8:1 MUX(64b) → m_tdata_pre → [FF]
+Stage 1 (registered):     m_tdata_pre → m_tdata (output)
 ```
 
-```sv
-// Stage-0: same combinational barrel shift as baseline
-assign m_tdata_pre  = wide_fill[127 - off_q*8 -: 64];
-assign m_tvalid_pre = (state_q == S_PAY) && ...;
+The FSM advances using `m_tvalid_pre` (one cycle ahead) so throughput is unchanged.
 
-// Stage-1: pipeline register
-always_ff @(posedge clk) begin
-  m_tvalid <= m_tvalid_pre;
-  if (m_tvalid_pre) begin
-    m_tdata <= m_tdata_pre;
-    m_tkeep <= m_tkeep_pre;
-    m_tlast <= m_tlast_pre;
-  end
-end
-
-// FSM advances using pre-stage valid (1 cycle ahead of consumer)
-S_PAY: if (m_tvalid_pre) begin ... end
-```
-
-### Critical Path Shortening
-
-```
-Original path (1 clock period):
-  [FF] → wide_fill → 8:1 MUX(64b) → m_tdata → [consumer]
-
-Split (same 1 clock period, each half can run at higher frequency):
-  Stage-0: [FF] → wide_fill → 8:1 MUX → m_tdata_pre → [pipeline FF]
-  Stage-1: [pipeline FF] → m_tdata → [consumer FF]
-```
-
-Pipeline register splits the ~6 FO4 path into two ~3 FO4 segments;
-theoretically fmax can improve ~40–60% (depends on setup/hold overhead).
-
-### Trade-off
-
-| Metric | vs Baseline |
-|--------|-------------|
-| fmax (timing) | Significantly higher (critical path halved) |
-| Output latency | +1 cycle |
-| Throughput | Same (no impact with m_tready=1) |
-| Area | Slightly larger (extra 64+8+1 = 73-bit pipeline FF) |
+Trade-off: +1 cycle output latency, 73-bit extra pipeline FF; estimated fmax improvement ~40–60%.
 
 ---
 
-## Five-Variant Comparison
+## Variant Comparison
 
-| Metric | Baseline | Power | Area | Throughput | Timing |
-|--------|----------|-------|------|------------|--------|
-| Registers (bits) | ~141 | ~141+73 | ~152 | ~141 | ~141+73 |
-| Main Comb logic | 128→64 MUX | 128→64 (gated) | 8→1 Byte MUX | 128→64 + s_tready | 128→64 (pipelined) |
-| Est. Gates | ~1500 | ~1600 | ~800 | ~1700 | ~1600 |
-| Bubble Cycles | 1/msg | 1/msg | N/A (byte-serial) | 0 | 1/msg |
-| Critical Path | ~6 FO4 | ~6 FO4 | ~2 FO4 | ~7 FO4 | ~3 FO4 |
-| Output latency (cycles) | 0 | +1 | +N/A | 0 | +1 |
-| Throughput (beats/beat) | ~0.8 | ~0.8 | ~0.1 | ~1.0 | ~0.8 |
-| Dynamic power | Baseline | Low (~60%) | Lowest (~40%) | Slightly higher (~110%) | Slightly higher (~105%) |
-| Use case | Dev/debug | Low-power SoC | Resource-limited | High-throughput 10G | High-frequency design |
+| Metric         | Baseline    | Power       | Area        | Throughput    | Timing        |
+|----------------|-------------|-------------|-------------|---------------|---------------|
+| Est. gates     | ~1500       | ~1600       | ~800        | ~1700         | ~1600         |
+| Critical path  | ~6 FO4      | ~6 FO4      | ~2 FO4      | ~7 FO4        | ~3 FO4        |
+| Input bubble   | 1/promotion | 1/promotion | N/A         | 0             | 1/promotion   |
+| Output latency | 0 cyc       | +1 cyc      | serial      | 0 cyc         | +1 cyc        |
+| Dynamic power  | ref         | ~60%        | ~40%        | ~110%         | ~105%         |
+| Best for       | Dev / debug | Low-power   | Area-limited| Max throughput| High-frequency|
 
 ---
 
-## Testbench
+## Testbench Overview
 
-**File**: `sim/msg_extractor_tb.sv`
+**Functional:** `sim/msg_extractor_tb.sv` — 12 fixed test cases covering single/multi-message, max payload, input gaps, and back-to-back boundaries.
 
-### Design
+**Stress:** `sim/msg_extractor_stress_tb.sv` — file-driven, reads random packets from `sim/pattern/`, verifies every output beat with `tkeep` masking.
 
-Uses **Background Monitor + Array Collection** to avoid timing races:
-```sv
-// Background monitor: collect all output beats
-always @(posedge clk) begin
-  if (m_tvalid && m_tready) begin
-    out_d[n_out] = m_tdata;
-    out_k[n_out] = m_tkeep;
-    out_l[n_out] = m_tlast;
-    n_out++;
-  end
-end
-```
-Each test records `base = n_out`, sends input, waits for `n_out >= base + expected`, then verifies.
-
-### Test Cases
-
-| # | Name | Verification focus |
-|---|------|---------------------|
-| 1 | Single 8B message | Basic function, aligned output |
-| 2 | Two messages 8B+10B | Consecutive messages, misaligned offset |
-| 3 | Max 32B payload | Multi-beat output, last beat tkeep |
-| 4 | Input with gaps | s_tvalid bubble tolerance |
-| 5 | Three 8B back-to-back | Dense message boundary handling |
-
-### DUT Selection
-
-Uses compile-time defines:
-```sh
-# Baseline (default)
-iverilog -g2012 -o sim.vvp pkg.sv rtl/msg_extractor_baseline.sv sim/msg_extractor_tb.sv
-
-# Power
-iverilog -g2012 -DMSG_DESIGN_POWER -o sim.vvp pkg.sv rtl/msg_extractor_power.sv sim/msg_extractor_tb.sv
-
-# Area / Throughput / Timing: similar, replace define and RTL file
-```
-
----
-
-## Verification Summary
-
-All five variants pass the same 12 test cases (5 tests × per-variant output beat count):
-
-```
-Results: 12 PASS, 0 FAIL  (Baseline, Power, Throughput, Timing)
-Results: 12 PASS, 0 FAIL  (Area, byte-serial achieves same output)
-```
-
----
-
-## Design Assumptions
-
-See `docs/ASSUMPTIONS.md`.
+See `docs/DEBUG.md` for all bugs found during verification.  
+See `docs/ASSUMPTIONS.md` for design assumptions.
