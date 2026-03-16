@@ -1,0 +1,38 @@
+# =============================================================================
+# USER_DEFINE_VARS
+# Edit this file only. Do not modify the Makefile directly.
+# =============================================================================
+#
+# KEY            DEFAULT          DESCRIPTION
+# ---------------------------------------------------------------------------
+# VARIANTS       (all 5)          Variants for  make all  and  make stress_all
+# DUMP_WAVE      0                1 = write VCD to sim/waveform/  on every run
+# PYTHON         python           Python interpreter (change to python3 if needed)
+# SEED           42               Random seed for packet generation
+# N_PKTS         20               Packets per stress run
+# MSGS_MIN       1                Min messages per packet
+# MSGS_MAX       5                Max messages per packet
+# PAY_MIN        8                Min payload length (bytes, valid: 8–32)
+# PAY_MAX        32               Max payload length (bytes, valid: 8–32)
+# LOGDIR         sim/logs         Output directory for simulation logs
+# SCRIPTS        sim/scripts      Python utilities directory
+# =============================================================================
+
+# ── Functional & Stress ───────────────────────────────────────────────────────
+VARIANTS  = baseline power area throughput timing
+DUMP_WAVE = 0
+
+# ── Toolchain ─────────────────────────────────────────────────────────────────
+PYTHON    = python
+
+# ── Stress defaults ───────────────────────────────────────────────────────────
+SEED     = 42
+N_PKTS   = 20
+MSGS_MIN = 1
+MSGS_MAX = 5
+PAY_MIN  = 8
+PAY_MAX  = 32
+
+# ── Paths (advanced) ──────────────────────────────────────────────────────────
+# LOGDIR  = sim/logs
+# SCRIPTS = sim/scripts

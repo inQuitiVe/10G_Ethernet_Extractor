@@ -1,0 +1,11 @@
+# variant=throughput scenario=dense seed=42 n_pkts=50 msgs=5-15 pay=8-12
+================================================================
+Stress Testbench
+  vectors : sim/pattern/throughput_dense_seed42.txt
+  entries : 1715
+================================================================
+================================================================
+Packets : 50
+Results : 888 PASS, 0 FAIL
+================================================================
+sim/msg_extractor_stress_tb.sv:278: $finish called at 17765000 (1ps)

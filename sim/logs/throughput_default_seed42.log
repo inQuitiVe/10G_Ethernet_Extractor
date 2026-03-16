@@ -1,0 +1,11 @@
+# variant=throughput scenario=default seed=42 n_pkts=20 msgs=1-5 pay=8-32
+================================================================
+Stress Testbench
+  vectors : sim/pattern/throughput_default_seed42.txt
+  entries : 387
+================================================================
+================================================================
+Packets : 20
+Results : 185 PASS, 0 FAIL
+================================================================
+sim/msg_extractor_stress_tb.sv:278: $finish called at 4005000 (1ps)

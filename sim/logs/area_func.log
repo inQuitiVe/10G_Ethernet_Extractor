@@ -1,0 +1,25 @@
+# variant=area type=func
+============================================================
+10G Ethernet Message Extractor Testbench
+============================================================
+[0] Test 1: Single 8-byte aligned message
+  PASS [T1 msg1]: data=0xdeadbeef00000001 keep=0xff last=1
+[215000] Test 2: Two messages (8B + 10B)
+  PASS [T2 msg1]: data=0xdeadbeef00000001 keep=0xff last=1
+  PASS [T2 msg2-beat0]: data=0xcafebabe00000000 keep=0xff last=0
+  PASS [T2 msg2-beat1]: data=0x0002000000000000 keep=0xc0 last=1
+[555000] Test 3: Maximum 32-byte payload
+  PASS [T3 pay]: data=0xaaaaaaaaaaaaaaaa keep=0xff last=0
+  PASS [T3 pay]: data=0xaaaaaaaaaaaaaaaa keep=0xff last=0
+  PASS [T3 pay]: data=0xaaaaaaaaaaaaaaaa keep=0xff last=0
+  PASS [T3 last]: data=0xaaaaaaaaaaaaaaaa keep=0xff last=1
+[1015000] Test 4: Input with gaps (tvalid bubbles)
+  PASS [T4 msg1]: data=0xdeadbeef00000001 keep=0xff last=1
+[1235000] Test 5: Three 8-byte messages back-to-back
+  PASS [T5 msg1]: data=0x1111111111111111 keep=0xff last=1
+  PASS [T5 msg2]: data=0x2222222222222222 keep=0xff last=1
+  PASS [T5 msg3]: data=0x3333333333333333 keep=0xff last=1
+============================================================
+Results: 12 PASS, 0 FAIL
+============================================================
+sim/msg_extractor_tb.sv:367: $finish called at 1655000 (1ps)
