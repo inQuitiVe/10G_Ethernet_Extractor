@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 parse_stress.py — Parse simulation log files and print summary tables.
 
@@ -20,6 +21,7 @@ Usage:
 import re
 import sys
 from pathlib import Path
+from typing import List
 
 
 # ── ANSI colours (disabled when not a tty) ────────────────────────────────────
@@ -276,7 +278,7 @@ def print_cycle_table(records: list):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def collect_logs(args: list) -> list[Path]:
+def collect_logs(args: list) -> List[Path]:
     paths = []
     if not args:
         args = ['sim/logs']

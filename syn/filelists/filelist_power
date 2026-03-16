@@ -1,0 +1,9 @@
+// filelist_power — Power-optimized variant
+// Paths relative to project root (rtlPath)
+sim/pkg_msg_extractor.sv
+rtl/submodules/barrel_shift_64.sv
+rtl/submodules/axis_out_pipe.sv
+rtl/submodules/byte_mux8.sv
+rtl/submodules/tkeep_enc.sv
+rtl/submodules/win_comb.sv
+rtl/msg_extractor_power.sv

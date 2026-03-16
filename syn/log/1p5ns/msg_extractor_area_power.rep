@@ -1,0 +1,78 @@
+Information: Propagating switching activity (low effort zero delay simulation). (PWR-6)
+Warning: Design has unannotated primary inputs. (PWR-414)
+Warning: Design has unannotated sequential cell outputs. (PWR-415)
+ 
+****************************************
+Report : power
+        -analysis_effort low
+Design : msg_extractor_area
+Version: Q-2019.12-SP5-3
+Date   : Mon Mar 16 06:17:05 2026
+****************************************
+
+
+Library(s) Used:
+
+    tcbn65gpluswc (File: /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db)
+
+
+Operating Conditions: WCCOM   Library: tcbn65gpluswc
+Wire Load Model Mode: segmented
+
+Design        Wire Load Model            Library
+------------------------------------------------
+msg_extractor_area     ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_0
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_1
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_2
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_3
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_4
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_5
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_6
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_7
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_8
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_9
+                       ZeroWireload      tcbn65gpluswc
+SNPS_CLOCK_GATE_HIGH_msg_extractor_area_10
+                       ZeroWireload      tcbn65gpluswc
+
+
+Global Operating Voltage = 0.9  
+Power-specific unit information :
+    Voltage Units = 1V
+    Capacitance Units = 1.000000pf
+    Time Units = 1ns
+    Dynamic Power Units = 1mW    (derived from V,C,T units)
+    Leakage Power Units = 1nW
+
+
+  Cell Internal Power  = 261.0686 uW   (82%)
+  Net Switching Power  =  55.8832 uW   (18%)
+                         ---------
+Total Dynamic Power    = 316.9518 uW  (100%)
+
+Cell Leakage Power     =  11.2458 uW
+
+
+                 Internal         Switching           Leakage            Total
+Power Group      Power            Power               Power              Power   (   %    )  Attrs
+--------------------------------------------------------------------------------------------------
+io_pad             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+memory             0.0000            0.0000            0.0000            0.0000  (   0.00%)
+black_box          0.0000            0.0000            0.0000            0.0000  (   0.00%)
+clock_network  3.8740e-02        1.6998e-02          455.6901        5.6194e-02  (  17.12%)
+register           0.2075        2.0777e-03        6.6323e+03            0.2162  (  65.87%)
+sequential         0.0000            0.0000            0.0000            0.0000  (   0.00%)
+combinational  1.4839e-02        3.6808e-02        4.1576e+03        5.5804e-02  (  17.00%)
+--------------------------------------------------------------------------------------------------
+Total              0.2611 mW     5.5883e-02 mW     1.1246e+04 nW         0.3282 mW
+1

@@ -144,6 +144,36 @@ Key observations:
 - **area** runs at ~13%: byte-serial processing takes ~8× more cycles than input beats.
 - **power** and **timing** share identical cycle counts (both add only a registered output stage).
 
+### PPA & Energy — Synthesis Results (Synopsys DC, TSMC 65 nm)
+
+Workload: **max** scenario (20 pkts, 163 exp beats). Cycles: area 1274, power/timing 350, throughput 224.  
+Energy = Dynamic Power × cycles × clock period. ⚠️ 0.5 ns: all variants have timing violations.
+
+#### 1.8 ns target (555 MHz) — timing **MET**
+
+| Variant        | Area (um²)       | Dyn. Power (uW)  | Energy (nJ)      | Cycles |
+|----------------|:----------------:|:----------------:|:----------------:|:------:|
+| **area**       | **1938**         | **265**          | 608              | 1274   |
+| power          | 3265             | **301**          | **189**          | 350    |
+| throughput     | 2670             | 345              | **139**          | 224    |
+| timing         | 3078             | 346              | 218              | 350    |
+
+#### 0.5 ns target (2 GHz) — timing VIOLATED
+
+| Variant        | Area (um²)       | Dyn. Power (uW)  | Energy (nJ)      | Worst Slack (ns) |
+|----------------|:----------------:|:----------------:|:----------------:|:----------------:|
+| **area**       | **3040**         | **1250**         | **797**          | −0.132           |
+| power          | 5235             | 2219             | 388              | −0.126           |
+| throughput     | 4559             | 1562             | **175**          | −0.229           |
+| timing         | 4720             | 1657             | 290              | **−0.104**       |
+
+**Key observations:**
+
+- **area** achieves the smallest die footprint at 1.8 ns (**1938 um²**, 41% less than the next smallest).
+- **power** delivers the lowest absolute dynamic power at 1.8 ns (**301 uW**). Although its instantaneous power is only marginally higher than `area` (301 vs 265 uW, +14%), the window-based architecture completes the workload in just 350 cycles versus 1274 for `area`, yielding **3.2× lower energy (189 nJ vs 608 nJ)**. 
+- **throughput** wins on energy-per-job at both frequencies (**139 nJ @ 1.8 ns, 175 nJ @ 0.5 ns**) because its combinational `s_tready` eliminates input bubbles, cutting cycles to 224 — fewest of all window variants.
+- **timing** has the least-violated slack at 0.5 ns (**−0.104 ns**), confirming the output-pipeline register successfully halves the critical path depth compared to baseline.
+
 ---
 
 ## Testbench Overview

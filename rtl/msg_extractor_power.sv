@@ -1,5 +1,7 @@
 // msg_extractor_power.sv — Power-optimized
 // Output reg + wide-bus gating (zero when not S_PAY) → lower switching.
+// wa_q enable guard: only update the 64-bit accumulator when new data arrives,
+// preventing unnecessary toggling and reducing dynamic power.
 
 `timescale 1ns/1ps
 
@@ -29,6 +31,7 @@ module msg_extractor_power (
   state_t state_q, state_nx;
 
   logic [63:0] wa_q,       wa_nx;
+  logic        wa_en;          // enable guard: gate wa_q FF to cut switching
   logic [63:0] wb_q,       wb_nx;
   logic        wb_vld_q,   wb_vld_nx;
   logic        wa_valid_q, wa_valid_nx;
@@ -93,6 +96,30 @@ module msg_extractor_power (
   );
 
   assign s_tready = (state_q == S_IDLE) || !wb_vld_q;
+
+  // wa_en: asserted only in cycles where wa_nx will carry a new payload word.
+  // Derived from the exact FSM branches that assign wa_nx = <new data>.
+  always_comb begin : wa_en_logic
+    wa_en = 1'b0;
+    case (state_q)
+      S_IDLE: wa_en = s_tvalid;
+      S_HDR: begin
+        if (off_q == 3'd0 && !wa_valid_q)
+          wa_en = wb_vld_q;
+        else
+          wa_en = (off_q > 3'd5) && wb_vld_q;
+      end
+      S_PAY: begin
+        if (m_tvalid_pre) begin
+          if (prem_q > 6'd8)
+            wa_en = 1'b1;
+          else if (noff5 >= 5'd8)
+            wa_en = (noff5 != 5'd8 || wb_vld_q);
+        end
+      end
+      default: wa_en = 1'b0;
+    endcase
+  end
 
   always_comb begin
     state_nx    = state_q;
@@ -198,7 +225,8 @@ module msg_extractor_power (
       off_q      <= '0; prem_q <= '0; last_q <= 1'b0;
     end else begin
       state_q    <= state_nx;
-      wa_q       <= wa_nx; wb_q <= wb_nx; wb_vld_q <= wb_vld_nx;
+      if (wa_en) wa_q <= wa_nx;   // enable guard: suppress toggling when idle
+      wb_q <= wb_nx; wb_vld_q <= wb_vld_nx;
       wa_valid_q <= wa_valid_nx;
       off_q      <= off_nx; prem_q <= prem_nx; last_q <= last_nx;
     end

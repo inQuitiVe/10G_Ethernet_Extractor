@@ -1,0 +1,771 @@
+
+                           Design Compiler Graphical 
+                                 DC Ultra (TM)
+                                  DFTMAX (TM)
+                              Power Compiler (TM)
+                                 DesignWare (R)
+                                 DC Expert (TM)
+                               Design Vision (TM)
+                               HDL Compiler (TM)
+                               VHDL Compiler (TM)
+                                  DFT Compiler
+                               Design Compiler(R)
+
+              Version Q-2019.12-SP5-3 for linux64 - Dec 04, 2020 
+
+                    Copyright (c) 1988 - 2020 Synopsys, Inc.
+   This software and the associated documentation are proprietary to Synopsys,
+ Inc. This software may only be used in accordance with the terms and conditions
+ of a written license agreement with Synopsys, Inc. All other use, reproduction,
+            or distribution of this software is strictly prohibited.
+Initializing...
+# =============================================================================
+# run_dc.tcl — Design Compiler synthesis for 10G Ethernet Message Extractor
+#
+# Invocation (called by Makefile):
+#   dc_shell -f syn/run_dc.tcl #            -x "set top_module msg_extractor_area; #                set filelist_path syn/filelists/filelist_area; #                set syn_effort high"
+#
+# Supported variants: area  power  throughput  timing
+# =============================================================================
+if { ![info exists top_module] }    { set top_module    msg_extractor_area }
+if { ![info exists rtlPath] }       { set rtlPath       [file normalize [file join [pwd] ..]] }
+if { ![info exists filelist_path] } { set filelist_path "syn/filelists/filelist_area" }
+if { ![info exists syn_effort] }    { set syn_effort    high }
+if { ![info exists clock_period] }  { set clock_period  2.0  }
+# Derive a filesystem-safe tag:  2.0 → 2p0ns,  1.8 → 1p8ns,  1.0 → 1p0ns
+set period_tag "[regsub -all {\.} $clock_period p]ns"
+1p8ns
+set filelist_full [file join $rtlPath $filelist_path]
+/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/syn/filelists/filelist_area
+# Read RTL file list (skip blank lines and comment lines)
+set rtl_files {}
+if { [file exists $filelist_full] } {
+    set f [open $filelist_full r]
+    while { [gets $f line] >= 0 } {
+        set line [string trim $line]
+        if { $line == "" || [string match "//*" $line] } { continue }
+        if { [string match "./*" $line] } { set line [string range $line 2 end] }
+        lappend rtl_files $line
+    }
+    close $f
+} else {
+    echo "ERROR: filelist not found: $filelist_full"
+    exit 1
+}
+# Target library — TSMC 65 nm GP (worst-case)
+set target_library /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+set link_library   $target_library
+/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+set symbol_library {}
+set wire_load_mode enclosed
+enclosed
+set timing_use_enhanced_capacitance_modeling true
+true
+set search_path [concat $rtlPath $search_path]
+/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor . /software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/libraries/syn /software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/dw/syn_ver /software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/dw/sim_ver
+set link_library [concat * $link_library]
+* /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+set synthetic_library {}
+set link_path [concat $link_library $synthetic_library]
+* /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+set dont_use_cells 1
+1
+set dont_use_cell_list ""
+remove_design -all
+1
+if {![file exists work]}               { exec mkdir -p work }
+if {![file exists log/$period_tag]}    { exec mkdir -p log/$period_tag }
+if {![file exists gate/$period_tag]}   { exec mkdir -p gate/$period_tag }
+set_svf work/default.svf
+1
+sh date
+Mon Mar 16 06:10:22 PDT 2026
+sh hostname
+ieng6-ece-02.ucsd.edu
+sh uptime
+ 06:10:22 up 264 days, 13:57,  6 users,  load average: 0.76, 0.74, 0.78
+set compile_effort                   "high"
+high
+set compile_no_new_cells_at_top_level false
+false
+set hdlin_enable_vpp                  true
+Information: Variable 'hdlin_enable_vpp' is obsolete and is being ignored. (INFO-100)
+true
+set hdlin_auto_save_templates         false
+false
+define_design_lib WORK -path work/.template
+1
+set verilogout_single_bit false
+false
+# Analyze RTL — SystemVerilog source files
+foreach vfile $rtl_files {
+    set fullpath [file join $rtlPath $vfile]
+    analyze -format sverilog -lib WORK $fullpath
+}
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/sim/pkg_msg_extractor.sv
+Presto compilation completed successfully.
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db'
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/barrel_shift_64.sv
+Presto compilation completed successfully.
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/axis_out_pipe.sv
+Presto compilation completed successfully.
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/byte_mux8.sv
+Presto compilation completed successfully.
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/tkeep_enc.sv
+Presto compilation completed successfully.
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/win_comb.sv
+Presto compilation completed successfully.
+Running PRESTO HDLC
+Compiling source file /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/msg_extractor_area.sv
+Presto compilation completed successfully.
+elaborate $top_module -lib WORK -update
+Warning: Detected use of obsolete/unsupported feature.  The following
+	will not be available in a future release of the application:
+	elaborate -update. Use plain elaborate instead (CMD-100)
+Loading db file '/software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/libraries/syn/gtech.db'
+Loading db file '/software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/libraries/syn/standard.sldb'
+  Loading link library 'tcbn65gpluswc'
+  Loading link library 'gtech'
+Running PRESTO HDLC
+
+Statistics for case statements in always block at line 48 in file
+	'/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/msg_extractor_area.sv'
+===============================================
+|           Line           |  full/ parallel  |
+===============================================
+|            48            |    auto/auto     |
+===============================================
+
+Statistics for case statements in always block at line 75 in file
+	'/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/msg_extractor_area.sv'
+===============================================
+|           Line           |  full/ parallel  |
+===============================================
+|            81            |    auto/auto     |
+===============================================
+
+Statistics for case statements in always block at line 136 in file
+	'/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/msg_extractor_area.sv'
+===============================================
+|           Line           |  full/ parallel  |
+===============================================
+|           150            |    auto/auto     |
+|           171            |    auto/auto     |
+===============================================
+
+Inferred memory devices in process
+	in routine msg_extractor_area line 136 in file
+		'/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/msg_extractor_area.sv'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|     last_q_reg      | Flip-flop |   1   |  N  | N  | Y  | N  | N  | N  | N  |
+|     state_q_reg     | Flip-flop |   2   |  Y  | N  | Y  | N  | N  | N  | N  |
+|      wa_q_reg       | Flip-flop |  64   |  Y  | N  | Y  | N  | N  | N  | N  |
+|     bptr_q_reg      | Flip-flop |   3   |  Y  | N  | Y  | N  | N  | N  | N  |
+|      hb0_q_reg      | Flip-flop |   8   |  Y  | N  | Y  | N  | N  | N  | N  |
+|     hgot_q_reg      | Flip-flop |   1   |  N  | N  | Y  | N  | N  | N  | N  |
+|     prem_q_reg      | Flip-flop |   6   |  Y  | N  | Y  | N  | N  | N  | N  |
+|      out_q_reg      | Flip-flop |  56   |  Y  | N  | Y  | N  | N  | N  | N  |
+|     ocnt_q_reg      | Flip-flop |   3   |  Y  | N  | Y  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (msg_extractor_area)
+Elaborated 1 design.
+Current design is now 'msg_extractor_area'.
+Information: Building the design 'byte_mux8'. (HDL-193)
+
+Statistics for case statements in always block at line 10 in file
+	'/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/rtl/submodules/byte_mux8.sv'
+===============================================
+|           Line           |  full/ parallel  |
+===============================================
+|            10            |    auto/auto     |
+===============================================
+Presto compilation completed successfully. (byte_mux8)
+Information: Building the design 'tkeep_enc'. (HDL-193)
+Presto compilation completed successfully. (tkeep_enc)
+1
+current_design $top_module
+Current design is 'msg_extractor_area'.
+{msg_extractor_area}
+set_optimize_registers true
+1
+set_cost_priority -delay
+1
+set_max_area 0
+1
+link
+
+  Linking design 'msg_extractor_area'
+  Using the following designs and libraries:
+  --------------------------------------------------------------------------
+  * (3 designs)               /home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/syn/msg_extractor_area.db, etc
+  tcbn65gpluswc (library)     /home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db
+
+1
+# Apply timing constraints inline (parameterised by clock_period)
+set io_delay 0.2
+0.2
+create_clock -name clk -period $clock_period [get_ports clk]
+1
+set_input_delay  -clock [get_clocks clk] -max $io_delay     [remove_from_collection [all_inputs] [get_ports clk]]
+1
+set_output_delay -clock [get_clocks clk] -max $io_delay [all_outputs]
+1
+propagate_constraints
+
+#   Propagate Constraints from cell u_tkeep/ (tkeep_enc) #
+
+#   Propagate Constraints from cell u_bmux/ (byte_mux8) #
+1
+current_design $top_module
+Current design is 'msg_extractor_area'.
+{msg_extractor_area}
+set_cost_priority {max_transition max_fanout max_delay max_capacitance}
+1
+set_fix_multiple_port_nets -all -buffer_constants
+1
+set_fix_hold [all_clocks]
+1
+set_driving_cell -lib_cell BUFFD8 -pin Z [all_inputs]
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+Warning: Design rule attributes from the driving cell will be
+	set on the port. (UID-401)
+1
+foreach_in_collection p [all_outputs] {
+    set_load 0.050 $p
+}
+set compile_effort                      "high"
+high
+set_app_var ungroup_keep_original_design true
+true
+set_register_merging [get_designs $top_module] false
+1
+set compile_seqmap_propagate_constants       false
+false
+set compile_seqmap_propagate_high_effort     false
+false
+foreach_in_collection design [get_designs "*"] {
+    current_design $design
+    set_fix_multiple_port_nets -all
+}
+Current design is 'msg_extractor_area'.
+Current design is 'byte_mux8'.
+Current design is 'tkeep_enc'.
+current_design $top_module
+Current design is 'msg_extractor_area'.
+{msg_extractor_area}
+# Compile
+echo "========================================================"
+========================================================
+echo " Variant      : $top_module"
+ Variant      : msg_extractor_area
+echo " Clock period : $clock_period ns  ($period_tag)"
+ Clock period : 1.8 ns  (1p8ns)
+echo " Synthesis    : $syn_effort"
+ Synthesis    : high
+echo "========================================================"
+========================================================
+if { $syn_effort == "low" } {
+    compile -map_effort low
+} elseif { $syn_effort == "medium" } {
+    compile -map_effort medium
+} else {
+    compile_ultra -retime -gate_clock -exact_map
+}
+Loading db file '/software/ECE/DesignCompiler-Q2019.12/syn/Q-2019.12-SP5-3/libraries/syn/dw_foundation.sldb'
+Warning: DesignWare synthetic library dw_foundation.sldb is added to the synthetic_library in the current command. (UISN-40)
+Information: Performing power optimization. (PWR-850)
+Analyzing: "/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db"
+Library analysis succeeded.
+Information: Evaluating DesignWare library utilization. (UISN-27)
+
+============================================================================
+| DesignWare Building Block Library  |         Version         | Available |
+============================================================================
+| Basic DW Building Blocks           | Q-2019.12-DWBB_201912.5 |     *     |
+| Licensed DW Building Blocks        | Q-2019.12-DWBB_201912.5 |     *     |
+============================================================================
+
+Information: Retiming is enabled. SVF file must be used for formal verification. (OPT-1210)
+
+Information: There are 12 potential problems in your design. Please run 'check_design' for more information. (LINT-99)
+
+  Simplifying Design 'msg_extractor_area'
+Information: Performing clock-gating with positive edge logic: 'integrated' and negative edge logic: 'integrated'. (PWR-1047)
+
+Loaded alib file './alib-52/tcbn65gpluswc.db.alib'
+  Building model 'DW01_NAND2'
+Information: Ungrouping hierarchy u_bmux before Pass 1 (OPT-776)
+Information: Ungrouping hierarchy u_tkeep before Pass 1 (OPT-776)
+Information: Ungrouping 2 of 14 hierarchies before Pass 1 (OPT-775)
+Information: State dependent leakage is now switched from on to off.
+
+  Beginning Pass 1 Mapping
+  ------------------------
+  Processing 'msg_extractor_area'
+Information: Added key list 'DesignWare' to design 'msg_extractor_area'. (DDB-72)
+ Implement Synthetic for 'msg_extractor_area'.
+  Processing 'SNPS_CLOCK_GATE_HIGH_msg_extractor_area_0'
+  Mapping integrated clock gating circuitry
+
+  Updating timing information
+Information: Updating design information... (UID-85)
+Information: The library cell 'TIEL' in the library 'tcbn65gpluswc' is not characterized for internal power. (PWR-536)
+Information: The library cell 'TIEH' in the library 'tcbn65gpluswc' is not characterized for internal power. (PWR-536)
+Information: The target library(s) contains cell(s), other than black boxes, that are not characterized for internal power. (PWR-24)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_0, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design msg_extractor_area_DW01_dec_J1_0, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_1, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_2, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_3, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_4, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_5, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_6, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_7, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_8, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_9, since there are no registers. (PWR-806)
+Information: Skipping clock gating on design SNPS_CLOCK_GATE_HIGH_msg_extractor_area_10, since there are no registers. (PWR-806)
+Information: Performing clock-gating on design msg_extractor_area. (PWR-730)
+Begin Combinational loops breaking ...
+	Number of combinational loops found: 0
+End Combinational loops breaking ...
+
+  Beginning Mapping Optimizations  (Ultra High effort)
+  -------------------------------
+Information: Checking pipeline property of design msg_extractor_area. (RTDC-137)
+Information: Pipeline detection aborted. Reason: cell wa_q_reg[63] is on a feedback loop. (RTDC-138)
+Information: Aborted pipeline detection on design msg_extractor_area. (RTDC-140)
+Begin Combinational loops breaking ...
+	Number of combinational loops found: 0
+End Combinational loops breaking ...
+Information: Checkpoint guidance is generated in the .svf file. (INFO-122)
+  Retiming msg_extractor_area (top)
+Warning: There are buffer or inverter cells in the
+	clock tree. The clock tree has to be recreated after
+	retiming. (RTDC-47)
+  Preferred flip-flop is DFD1 with setup = 0.02
+
+Warning: The following cells only drive
+	asynchronous pins of sequential cells which have no
+	timing constraint. Therefore retiming will not optimize
+	delay through them:
+	*cell*470 (INVD0)
+
+ (RTDC-115)
+
+  Retiming base-clock clk, rising edge.
+  Beginning minimum period retiming ...
+  ... minimum period retiming done.
+  Beginning minimum area retiming step 1 ...
+  ... minimum area retiming step 1 done.
+  Beginning minimum area retiming step 2 ...
+  5% 10% 15% 20% 25% 30% 35% 40% 45% 50% 55% 60% 65% 70% 75% 80% 85% 90% 95% 100% 
+  ... minimum area retiming step 2 done.
+  Beginning minimum area retiming step 3 ...
+  10% 20% 30% 40% 50% ... 100% 
+  ... minimum area retiming step 3 done.
+  Beginning final register move ...
+  ... final register move done.
+  Lower bound estimate = 2.69
+  Critical path length = 2.69
+  Clock correction = 0.15 (clock-to-Q delay = 0.13, setup = 0.02, uncertainty = 0.00)
+WARNING: cell clk_r_REG15_S4 ignores exact_map
+
+                                  TOTAL                                                            
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE   MIN DELAY 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER      COST    
+  --------- --------- --------- --------- --------- ------------------------- --------- -----------
+    0:00:07    2317.7      0.00       0.0      48.6                           19294.6289      0.00  
+    0:00:07    2314.4      0.12       0.7      48.6                           19266.0059      0.00  
+
+  Beginning Constant Register Removal
+  -----------------------------------
+    0:00:07    2314.4      0.12       0.7      48.6                           19266.0059      0.00  
+    0:00:07    2314.4      0.12       0.7      48.6                           19266.0059      0.00  
+
+  Beginning Global Optimizations
+  ------------------------------
+  Numerical Synthesis (Phase 1)
+  Numerical Synthesis (Phase 2)
+  Global Optimization (Phase 1)
+  Global Optimization (Phase 2)
+  Global Optimization (Phase 3)
+  Global Optimization (Phase 4)
+  Global Optimization (Phase 5)
+  Global Optimization (Phase 6)
+  Global Optimization (Phase 7)
+  Global Optimization (Phase 8)
+  Global Optimization (Phase 9)
+  Global Optimization (Phase 10)
+  Global Optimization (Phase 11)
+  Global Optimization (Phase 12)
+  Global Optimization (Phase 13)
+  Global Optimization (Phase 14)
+  Global Optimization (Phase 15)
+  Global Optimization (Phase 16)
+  Global Optimization (Phase 17)
+  Global Optimization (Phase 18)
+  Global Optimization (Phase 19)
+  Global Optimization (Phase 20)
+  Global Optimization (Phase 21)
+  Global Optimization (Phase 22)
+  Global Optimization (Phase 23)
+  Global Optimization (Phase 24)
+  Global Optimization (Phase 25)
+  Global Optimization (Phase 26)
+  Global Optimization (Phase 27)
+  Global Optimization (Phase 28)
+  Global Optimization (Phase 29)
+  Global Optimization (Phase 30)
+  Global Optimization (Phase 31)
+
+  Beginning Isolate Ports
+  -----------------------
+
+  Beginning Delay Optimization
+  ----------------------------
+    0:00:08    2036.2      0.00       0.0       2.5                           15194.3877      0.00  
+    0:00:08    2036.2      0.00       0.0       2.5                           15194.3877      0.00  
+    0:00:08    2036.2      0.00       0.0       2.5                           15194.3877      0.00  
+    0:00:08    2036.2      0.00       0.0       2.5                           15194.3877      0.00  
+    0:00:08    2034.0      0.00       0.0       2.5                           15162.9229      0.00  
+    0:00:08    2034.0      0.00       0.0       2.5                           15162.9229      0.00  
+
+  Beginning WLM Backend Optimization
+  --------------------------------------
+    0:00:08    1927.4      0.00       0.0       2.5                           12351.8066      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12351.8066      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12351.8066      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+
+
+  Beginning Design Rule Fixing  (max_transition)  (max_capacitance)
+  ----------------------------
+
+                                  TOTAL                                                            
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE   MIN DELAY 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER      COST    
+  --------- --------- --------- --------- --------- ------------------------- --------- -----------
+    0:00:08    1927.4      0.00       0.0       2.5                           12250.7627      0.00  
+  Global Optimization (Phase 32)
+  Global Optimization (Phase 33)
+  Global Optimization (Phase 34)
+    0:00:08    1948.0      0.00       0.0       0.0                           12371.0430      0.00  
+    0:00:08    1948.0      0.00       0.0       0.0                           12371.0430      0.00  
+
+
+  Beginning Leakage Power Optimization  (max_leakage_power 0)
+  ------------------------------------
+
+                                  TOTAL                                                            
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE   MIN DELAY 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER      COST    
+  --------- --------- --------- --------- --------- ------------------------- --------- -----------
+    0:00:08    1948.0      0.00       0.0       0.0                           12371.0430      0.00  
+  Global Optimization (Phase 35)
+  Global Optimization (Phase 36)
+  Global Optimization (Phase 37)
+  Global Optimization (Phase 38)
+  Global Optimization (Phase 39)
+  Global Optimization (Phase 40)
+  Global Optimization (Phase 41)
+  Global Optimization (Phase 42)
+  Global Optimization (Phase 43)
+  Global Optimization (Phase 44)
+  Global Optimization (Phase 45)
+  Global Optimization (Phase 46)
+  Global Optimization (Phase 47)
+    0:00:08    2055.2      0.00       0.0       0.0                           14368.6494      0.00  
+    0:00:08    2055.2      0.00       0.0       0.0                           14368.6494      0.00  
+    0:00:08    2055.2      0.00       0.0       0.0                           14368.6494      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+
+                                  TOTAL                                                            
+   ELAPSED            WORST NEG   SETUP    DESIGN                              LEAKAGE   MIN DELAY 
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT            POWER      COST    
+  --------- --------- --------- --------- --------- ------------------------- --------- -----------
+    0:00:09    1956.2      0.00       0.0       0.0                           11635.2744      0.00  
+    0:00:09    1950.8      0.00       0.0       0.0                           11545.8379      0.00  
+    0:00:09    1950.8      0.00       0.0       0.0                           11545.8379      0.00  
+    0:00:09    1950.8      0.00       0.0       0.0                           11545.8379      0.00  
+    0:00:09    1950.8      0.00       0.0       0.0                           11545.8379      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+    0:00:09    1937.9      0.00       0.0       0.0                           11434.9678      0.00  
+Loading db file '/home/linux/ieng6/ECE260B_WI26_A00/public/PDKdata/db/tcbn65gpluswc.db'
+
+
+Note: Symbol # after min delay cost means estimated hold TNS across all active scenarios 
+
+
+  Optimization Complete
+  ---------------------
+Information: State dependent leakage is now switched from off to on.
+Information: Propagating switching activity (low effort zero delay simulation). (PWR-6)
+1
+current_design $top_module
+Current design is 'msg_extractor_area'.
+{msg_extractor_area}
+change_names -rules verilog -hierarchy
+Warning: The specified replacement character (_) is conflicting with the specified allowed or restricted character.   (UCN-4)
+1
+write -format verilog -hier -output     [format "gate/%s/%s.out.v" $period_tag $top_module]
+Writing verilog file '/home/linux/ieng6/ECE260B_WI26_A00/c8chiu/10G_Ethernet_Extractor/syn/gate/1p8ns/msg_extractor_area.out.v'.
+1
+# Write reports
+redirect [format "log/%s/%s_area.rep"   $period_tag $top_module] { report_area }
+redirect -append [format "log/%s/%s_area.rep" $period_tag $top_module]     { report_reference }
+redirect [format "log/%s/%s_power.rep"  $period_tag $top_module]     { report_power }
+redirect [format "log/%s/%s_timing.rep" $period_tag $top_module]     { report_timing -path full -max_paths 100 -nets -transition_time                     -capacitance -significant_digits 3 -nosplit }
+# Quick summary to stdout
+set inFile [open log/${period_tag}/${top_module}_area.rep]
+file13
+while { [gets $inFile line] >= 0 } {
+    if { [regexp {Total cell area:} $line] } { set AREA [lindex $line 3] }
+}
+close $inFile
+set inFile [open log/${period_tag}/${top_module}_power.rep]
+file13
+while { [gets $inFile line] >= 0 } {
+    if { [regexp {Total Dynamic Power} $line] } { set PWR  [lindex $line 4] }
+    if { [regexp {Cell Leakage Power}  $line] } { set LEAK [lindex $line 4] }
+}
+close $inFile
+echo "========================================================"
+========================================================
+echo " Results for $top_module  @ $clock_period ns"
+ Results for msg_extractor_area  @ 1.8 ns
+if { [info exists AREA] } { echo "   Total cell area   : $AREA um2" }
+   Total cell area   : 1937.880024 um2
+if { [info exists PWR]  } { echo "   Total dyn. power  : $PWR"      }
+   Total dyn. power  : 264.9753
+if { [info exists LEAK] } { echo "   Cell leakage pwr  : $LEAK"     }
+   Cell leakage pwr  : 11.0851
+echo "========================================================"
+========================================================
+set unmapped [get_designs -filter "is_unmapped == true" $top_module]
+if { [sizeof_collection $unmapped] != 0 } {
+    echo "****************************************************"
+    echo "* ERROR: Compile finished with unmapped logic.     *"
+    echo "****************************************************"
+}
+sh date
+Mon Mar 16 06:12:14 PDT 2026
+sh uptime
+ 06:12:14 up 264 days, 13:59,  6 users,  load average: 4.95, 2.27, 1.33
+# Move DC runtime artifacts into work/
+foreach f {command.log filenames.log} {
+    if { [file exists $f] } { file rename -force $f work/$f }
+}
+foreach d [glob -nocomplain alib-*] {
+    if { [file exists work/$d] } { file delete -force work/$d }
+    file rename -force $d work/$d
+}
+echo "run_dc.tcl completed successfully — $top_module @ $clock_period ns"
+run_dc.tcl completed successfully — msg_extractor_area @ 1.8 ns
+exit
+
+Memory usage for this session 241 Mbytes.
+Memory usage for this session including child processes 241 Mbytes.
+CPU usage for this session 113 seconds ( 0.03 hours ).
+Elapsed time for this session 116 seconds ( 0.03 hours ).
+
+Thank you...

@@ -55,7 +55,7 @@ VARIANTS  ?= baseline power area throughput timing
 DUMP_WAVE ?= 0
 
 # ── User-facing tool paths (override in USER_DEFINE_VARS if needed) ───────────
-PYTHON    ?= python
+PYTHON    ?= python3
 SCRIPTS    = sim/scripts
 LOGDIR    ?= sim/logs
 
